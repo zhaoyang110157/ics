@@ -1,3 +1,16 @@
+/*
+ * Student Name: Zhu Zhaoyang
+ * Student ID: 517021910798
+ *
+ * This file is a cache simulator written in C that takes a valgrind memory trace as input,
+ * simulates the hit/miss behavior of a cache memory on this trace, and outputs the total
+ * number of hits, misses and evictions. The cache simulator uses LRU replacement policy,
+ * and it ignores the instruction access in input and doesn't contain actual data. Also, it
+ * assumes that memory accesses are aligned properly so that a single memory access never
+ * crosses block boundaries.
+ *
+ */
+
 #include "cachelab.h"
 #include "malloc.h"
 #include <getopt.h>
