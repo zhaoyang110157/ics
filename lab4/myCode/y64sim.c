@@ -391,11 +391,11 @@ stat_t nexti(y64sim_t *sim)
  	   set_long_val(sim->m , rB + imm , rA);
 	   break;
       case I_MRMOVQ: /* 5:0 regB:regA imm */
-	   if(!get_long_val(sim->m , rA+imm , &tmp)){
-		err_print("PC = 0x%lx, Invalid data address 0x%lx", sim->pc,rA+imm);
+	   if(!get_long_val(sim->m , rB+imm , &tmp)){
+		err_print("PC = 0x%lx, Invalid data address 0x%lx", sim->pc,rB+imm);
 		return STAT_ADR;
 	   }
-	   set_reg_val(sim->r , regB, tmp );
+	   set_reg_val(sim->r , regA, tmp );
 	   break;
       case I_ALU: /* 6:x regA:regB */
 	   set_reg_val(sim->r , regB , compute_alu(ifun , rA ,rB));
