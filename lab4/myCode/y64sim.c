@@ -286,11 +286,12 @@ cc_t compute_cc(alu_t op, long_t argA, long_t argB)
 {
     long_t val = compute_alu( op, argA, argB); 
 //add code above
-    bool_t zero = (val == 0);
+    bool_t zero = FALSE;
+    if( val == 0 ) zero=TRUE;
     bool_t sign = ((int)val < 0);//mark here that the sf also get the thing that is equal
     bool_t ovf = FALSE;
     if((argA < 0 && argB < 0 && val >0) || (argA > 0 && argB > 0 && val < 0))//
-	ovf = TRUE;  //
+	ovf = TRUE;  // 
     return PACK_CC(zero,sign,ovf);
 }
 
@@ -398,7 +399,7 @@ stat_t nexti(y64sim_t *sim)
 	   break;
       case I_ALU: /* 6:x regA:regB */
 	   set_reg_val(sim->r , regB , compute_alu(ifun , rA ,rB));
-	   compute_cc(ifun,rA,rB);
+	   sim->cc = compute_cc(ifun,rA,rB);
 	   break; 
       case I_JMP: /* 7:x imm */
 	   if(cond_doit(sim->cc, ifun))
