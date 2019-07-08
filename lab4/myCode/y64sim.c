@@ -55,7 +55,7 @@ bool_t get_long_val(mem_t *m, long_t addr, long_t *dest)
 	    return FALSE;
     val = 0;
 //little ending fuck, that i have to store them like this
-//Fuck TA
+// It seems that TA miss some kind of Condition
     for (i = 0; i < 8; i++)
 	    val = val | ((long_t)m->data[addr+i])<<(8*i);
     *dest = val;
