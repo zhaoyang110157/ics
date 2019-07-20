@@ -129,9 +129,9 @@ symbol_t *find_symbol(char *name)
  */
 int add_symbol(char *name)
 {
-    symbol_t *symptr = symbol;
+    symbol_t *symptr = symtab;
     /* check duplicate */
-    while( symptr->next != null) {//to find the tail;
+    while( symptr->next != NULL) {//to find the tail;
 	symptr = symptr->next;
 	
 	if(strcmp(symptr->name,name))
@@ -140,10 +140,10 @@ int add_symbol(char *name)
 
     /* create new symbol_t (don't forget to free it)*/
     symbol_t *newsym;
-    newsym = (synbol_t *)malloc(sizeof(symbol_t));
+    newsym = (symbol_t *)malloc(sizeof(symbol_t));
     newsym->name = name;
     newsym->addr = vmaddr;
-    newsym->next = null;
+    newsym->next = NULL;
     /* add the new symbol_t to symbol table */
     symptr->next = newsym;
     return 0;
@@ -166,13 +166,13 @@ void add_reloc(char *name, bin_t *bin)
     /* create new reloc_t (don't forget to free it)*/
     reloc_t *newrel;
     newrel = (reloc_t*)malloc(sizeof(reloc_t));
-    newrel->next = null;
+    newrel->next = NULL;
     newrel->y64bin = bin;
     newrel->name = name;
 
     /* add the new reloc_t to relocation table */
     reloc_t *relptr = reltab;
-    while(relptr->next!=null){
+    while(relptr->next!=NULL){
    	relptr = relptr->next;
     }
     relptr->next = newrel;
@@ -185,6 +185,7 @@ void add_reloc(char *name, bin_t *bin)
 #define IS_COMMENT(s) (*(s)=='#')
 #define IS_REG(s) (*(s)=='%')
 #define IS_IMM(s) (*(s)=='$')
+#define IS_HEX_LETTER(s) ((*(s)>='a' && *(s)<='f') || (*(s)>='A' && *(s)<='F') || (*(s)=='x'))
 
 #define IS_BLANK(s) (*(s)==' ' || *(s)=='\t')
 #define IS_END(s) (*(s)=='\0')
@@ -220,7 +221,7 @@ parse_t parse_instr(char **ptr, instr_t **inst)
     /* find_instr and check end */
     *inst = find_instr(*ptr);
     /* set 'ptr' and 'inst' */
-    if((*inst)!=null){
+    if((*inst)!= NULL){
 	*ptr += (*inst)->len;
 	return PARSE_INSTR; 
     }
@@ -316,7 +317,7 @@ parse_t parse_symbol(char **ptr, char **name)
 	    slen ++;
 	    ptmp ++;
 	}
-	*name = (char *)malloc(slen *i);
+	*name = (char *)malloc(slen +1);
 	*(*name + slen) = '\0';
 	strncpy(*name, *ptr, slen);
 	*ptr += slen;
@@ -397,7 +398,7 @@ parse_t parse_imm(char **ptr, char **name, long *value)
 	    return PARSE_DIGIT;
     }
     else 
-	if(ID_LETTER(*ptr)){
+	if(IS_LETTER(*ptr)){
 	    if(parse_symbol(ptr,name) == PARSE_SYMBOL)
 		return PARSE_SYMBOL;
 	}	
@@ -428,18 +429,16 @@ parse_t parse_mem(char **ptr, long *value, regid_t *regid)
     SKIP_BLANK(*ptr);
 
     if(IS_DIGIT(*ptr)){
-	if(parse_digit(ptr,value) != PARSE_DIGIT)
-	    return PARSE_ERR;
-	if(parse_reg(ptr, regid) == PARSE_REG)
-	    return PARSE_MEM;
+			if(parse_digit(ptr,value) != PARSE_DIGIT)
+				return PARSE_ERR;
+			if(parse_reg(ptr, regid) == PARSE_REG)
+				return PARSE_MEM;
     }
-    else
-	if(IS_REG(*ptr) ||IS_LBRACKET(*pt)){
-	    *value = 0;
-	    if(parse_reg(*ptr) == PARSE_REG)
-		return PARSE_MEM;
-	}
-    }
+    else	if(IS_REG(*ptr) ||IS_LBRACKET(*ptr)){
+				*value = 0;
+				if(parse_reg(*ptr, regid) == PARSE_REG)
+					return PARSE_MEM;
+	 }
     return PARSE_ERR;
 }
 
@@ -564,14 +563,14 @@ type_t parse_line(line_t *line)
     char *name;
 
     if (parse_label(&ptr, &name) == PARSE_LABEL){
-	line->type = TYPE_INS;
-	(line->y64bin).addr = vmaddr;
-	(line->y64bin).bytes = 0;
+		line->type = TYPE_INS;
+		(line->y64bin).addr = vmaddr;
+		(line->y64bin).bytes = 0;
 
-	if (add_symbol(name) < 0){
-	    fprintf(stderr, "[L%d]: Dup symbol:%s\n", lineno, name);
-	    return TYPE_ERR;
-	}
+		if (add_symbol(name) < 0){
+			fprintf(stderr, "[L%d]: Dup symbol:%s\n", lineno, name);
+			return TYPE_ERR;
+		}
     }
 
     SKIP_BLANK(ptr);
@@ -580,304 +579,227 @@ type_t parse_line(line_t *line)
 
     if (parse_instr(&ptr, &inst) == PARSE_INSTR){
 
-	line->type = TYPE_INS;
-	(line->y64bin).addr = vmaddr;
-	(line->y64bin).bytes = inst->bytes;
+		line->type = TYPE_INS;
+		(line->y64bin).addr = vmaddr;
+		(line->y64bin).bytes = inst->bytes;
 
-	regid_t regA;
-	regid_t regB;
+		regid_t regA;
+		regid_t regB;
 
-	long value;
-	char *name;
-	char delim = ',';
-	parse_t vtype;
+		long value;
+		char *name;
+		char delim = ',';
+		parse_t vtype;
 
-	if (!strcmp(inst->name,"nop")){
-	    	(line->y64bin).codes[0] = inst->code;
-	}
-	else 
-		    if (!strcmp(inst->name,"halt")){
-			(line->y64bin).codes[0] = inst->code;
-		    }
-		    else 
-				if (!strcmp(inst->name,"rrmovq") || !strcmp(inst->name,"cmovle") 
-					|| !strcmp(inst->name,"cmovl") || !strcmp(inst->name,"cmove") 
-					|| !strcmp(inst->name,"cmovne") || !strcmp(inst->name,"cmovge") 
-					|| !strcmp(inst->name,"cmovg"))
-				{
-				    (line->y64bin).codes[0] = inst->code;
-				    if (parse_reg(&ptr, &regA) != PARSE_REG){	
-					fprintf(stderr, "[L%d]: Invalid REG\n", lineno);
-					return TYPE_ERR;
-				    }
-
-				    if (parse_delim(&ptr, delim) != PARSE_DELIM){
-					fprintf(stderr, "[L%d]: Invalid ','\n", lineno);
-					return TYPE_ERR;
-				    }
-
-				    if (parse_reg(&ptr, &regB) != PARSE_REG){
-					fprintf(stderr, "[L%d]: Invalid REG\n", lineno);
-					return TYPE_ERR;
-				    }
-						
-				    (line->y64bin).codes[1] = HPACK(regA, regB);
-
-				}
-
-			       else
-				    if (!strcmp(inst->name,"irmovq")){
+		if (!strcmp(inst->name,"nop")){
+	    		(line->y64bin).codes[0] = inst->code;
+		}
+		else	if (!strcmp(inst->name,"halt")){
 					(line->y64bin).codes[0] = inst->code;
-					vtype = parse_imm(&ptr, &name, &value);
+				}
+		else if (!strcmp(inst->name,"rrmovq") || !strcmp(inst->name,"cmovle") 
+						|| !strcmp(inst->name,"cmovl") || !strcmp(inst->name,"cmove") 
+						|| !strcmp(inst->name,"cmovne") || !strcmp(inst->name,"cmovge") 
+						|| !strcmp(inst->name,"cmovg"))
+						{
+							(line->y64bin).codes[0] = inst->code;
+							if (parse_reg(&ptr, &regA) != PARSE_REG){	
+								fprintf(stderr, "[L%d]: Invalid REG\n", lineno);
+								return TYPE_ERR;
+							}
+
+							if (parse_delim(&ptr, delim) != PARSE_DELIM){
+								fprintf(stderr, "[L%d]: Invalid ','\n", lineno);
+								return TYPE_ERR;
+							}
+
+							if (parse_reg(&ptr, &regB) != PARSE_REG){
+								fprintf(stderr, "[L%d]: Invalid REG\n", lineno);
+								return TYPE_ERR;
+							}						
+							(line->y64bin).codes[1] = HPACK(regA, regB);
+						}
+	 else    if (!strcmp(inst->name,"irmovq")){
+				(line->y64bin).codes[0] = inst->code;
+				vtype = parse_imm(&ptr, &name, &value);
 	
-					if (vtype == PARSE_ERR){
+				if (vtype == PARSE_ERR){
 					    fprintf(stderr, "[L%d]: Invalid Immediate\n", lineno);
 					    return TYPE_ERR;
-					}
+				}
 
-					if (parse_delim(&ptr, delim) != PARSE_DELIM){
-					    fprintf(stderr, "[L%d]: Invalid ','\n", lineno);
+				if (parse_delim(&ptr, delim) != PARSE_DELIM){
+						fprintf(stderr, "[L%d]: Invalid ','\n", lineno);
 					    return TYPE_ERR;
-					}
+				}
 
-					if (parse_reg(&ptr, &regB) != PARSE_REG){
-					    fprintf(stderr, "[L%d]: Invalid REG\n", lineno);
+				if (parse_reg(&ptr, &regB) != PARSE_REG){
+				        fprintf(stderr, "[L%d]: Invalid REG\n", lineno);
 					    return TYPE_ERR;
-					}
+				}
 
-					(line->y64bin).codes[1] = HPACK(REG_NONE, regB);
+				(line->y64bin).codes[1] = HPACK(REG_NONE, regB);
 
-					if (vtype == PARSE_DIGIT){
-					    for (int i = 0; i < 8; ++i)
+				if (vtype == PARSE_DIGIT){
+					  for (int i = 0; i < 8; ++i)
 		    				(line->y64bin).codes[2+i] = HPACK((value>>(i*8+4))&0xF, (value>>(i*8))&0xF); 
-					}
-					else 
-					    if (vtype == PARSE_SYMBOL)
+				}
+				else     if (vtype == PARSE_SYMBOL)
 						add_reloc(name, &(line->y64bin));
-				    }
+	 }
 
-    else 
-	if (!strcmp(inst->name,"rmmovq")){
-	    (line->y64bin).codes[0] = inst->code;
+    else 	if (!strcmp(inst->name,"rmmovq")){
+			(line->y64bin).codes[0] = inst->code;
 
-	    if (parse_reg(&ptr, &regA) != PARSE_REG){
-		fprintf(stderr, "[L%d]: Invalid REG\n", lineno);
-                return TYPE_ERR;
-	    }
+			if (parse_reg(&ptr, &regA) != PARSE_REG){
+				fprintf(stderr, "[L%d]: Invalid REG\n", lineno);
+						return TYPE_ERR;
+			}
 
-            if (parse_delim(&ptr, delim) != PARSE_DELIM){
-		fprintf(stderr, "[L%d]: Invalid ','\n", lineno);
-                return TYPE_ERR;
-	    }
+			if (parse_delim(&ptr, delim) != PARSE_DELIM){
+				fprintf(stderr, "[L%d]: Invalid ','\n", lineno);
+						return TYPE_ERR;
+			}
+
+			if (parse_mem(&ptr, &value, &regB) != PARSE_MEM){
+				fprintf(stderr, "[L%d]: Invalid MEM\n", lineno);
+						return TYPE_ERR;
+			}
+
+			(line->y64bin).codes[1] = HPACK(regA, regB);
+
+			for (int i = 0; i < 8; ++i)
+            		(line->y64bin).codes[2+i] = HPACK((value>>(i*8+4))&0xF, (value>>(i*8))&0xF);
+
+      }
+
+     else    if (!strcmp(inst->name,"mrmovq")){
+			(line->y64bin).codes[0] = inst->code;
 
             if (parse_mem(&ptr, &value, &regB) != PARSE_MEM){
-		fprintf(stderr, "[L%d]: Invalid MEM\n", lineno);
-                return TYPE_ERR;
-	    }
-
-	    (line->y64bin).codes[1] = HPACK(regA, regB);
-
-	    for (int i = 0; i < 8; ++i)
-            	(line->y64bin).codes[2+i] = HPACK((value>>(i*8+4))&0xF, (value>>(i*8))&0xF);
-       }
-
-       else
-	    if (!strcmp(inst->name,"mrmovq")){
-		(line->y64bin).codes[0] = inst->code;
-
-            	if (parse_mem(&ptr, &value, &regB) != PARSE_MEM){
-		    fprintf(stderr, "[L%d]: Invalid MEM\n", lineno);
-                    return TYPE_ERR;
+					fprintf(stderr, "[L%d]: Invalid MEM\n", lineno);
+							return TYPE_ERR;
 	        }
 
 	        if (parse_delim(&ptr, delim) != PARSE_DELIM){
-	            fprintf(stderr, "[L%d]: Invalid ','\n", lineno);
-                    return TYPE_ERR;
+					fprintf(stderr, "[L%d]: Invalid ','\n", lineno);
+						return TYPE_ERR;
 	        }
 
-            	if (parse_reg(&ptr, &regA) != PARSE_REG){
-		    fprintf(stderr, "[L%d]: Invalid REG\n", lineno);
-                    return TYPE_ERR;
+            if (parse_reg(&ptr, &regA) != PARSE_REG){
+					fprintf(stderr, "[L%d]: Invalid REG\n", lineno);
+							return TYPE_ERR;
 	        }
-
-            	(line->y64bin).codes[1] = HPACK(regA, regB);
-
-            	for (int i = 0; i < 8; ++i)
-                    (line->y64bin).codes[2+i] = HPACK((value>>(i*8+4))&0xF, (value>>(i*8))&0xF);
-            }
-
-            else 
-		if (!strcmp(inst->name,"addq") || !strcmp(inst->name,"subq")
-			|| !strcmp(inst->name,"andq") || !strcmp(inst->name,"xorq"))
-	        {
-		    (line->y64bin).codes[0] = inst->code;
-	            if (parse_reg(&ptr, &regA) != PARSE_REG){
-			fprintf(stderr, "[L%d]: Invalid REG\n", lineno);
-                    return TYPE_ERR;
-		}
-            if (parse_delim(&ptr, delim) != PARSE_DELIM){
-
-				fprintf(stderr, "[L%d]: Invalid ','\n", lineno);
-
-                return TYPE_ERR;
-
-			}
-
-            if (parse_reg(&ptr, &regB) != PARSE_REG){
-
-				fprintf(stderr, "[L%d]: Invalid REG\n", lineno);
-
-                return TYPE_ERR;
-
-			}
-
-
 
             (line->y64bin).codes[1] = HPACK(regA, regB);
 
-        }
+            for (int i = 0; i < 8; ++i)
+                    (line->y64bin).codes[2+i] = HPACK((value>>(i*8+4))&0xF, (value>>(i*8))&0xF);
 
+      }
 
+     else  if (!strcmp(inst->name,"addq") || !strcmp(inst->name,"subq")
+				|| !strcmp(inst->name,"andq") || !strcmp(inst->name,"xorq"))
+	        {
+						(line->y64bin).codes[0] = inst->code;
+						if (parse_reg(&ptr, &regA) != PARSE_REG){
+								fprintf(stderr, "[L%d]: Invalid REG\n", lineno);
+								return TYPE_ERR;
+						}
+						if (parse_delim(&ptr, delim) != PARSE_DELIM){
+							fprintf(stderr, "[L%d]: Invalid ','\n", lineno);
+							return TYPE_ERR;
+						}
 
-	else 
-	    if (!strcmp(inst->name,"jmp") || !strcmp(inst->name,"jle")
-			|| !strcmp(inst->name,"jl") || !strcmp(inst->name,"je")
-			|| !strcmp(inst->name,"jne") || !strcmp(inst->name,"jge")
-			|| !strcmp(inst->name,"jg") || !strcmp(inst->name,"call"))
-            {
-		(line->y64bin).codes[0] = inst->code;
-		vtype = parse_imm(&ptr, &name, &value);
-		if (vtype == PARSE_ERR){
-		    fprintf(stderr, "[L%d]: Invalid DEST\n", lineno);
-		    return TYPE_ERR;
-		}
-		if (vtype == PARSE_DIGIT){
-		    fprintf(stderr, "[L%d]: Invalid DEST\n", lineno);
-		    return TYPE_ERR;
-		}
-		else if (vtype == PARSE_SYMBOL)
-			add_reloc(name, &(line->y64bin));
-            }
-            else
- 		if (!strcmp(inst->name,"ret")){
-		    (line->y64bin).codes[0] = inst->code;
+						if (parse_reg(&ptr, &regB) != PARSE_REG){
+							fprintf(stderr, "[L%d]: Invalid REG\n", lineno);
+							return TYPE_ERR;
+						}
+						(line->y64bin).codes[1] = HPACK(regA, regB);
 	        }
-	        else
-		    if (!strcmp(inst->name,"pushq"))       {
-			(line->y64bin).codes[0] = inst->code;
-	                if (parse_reg(&ptr, &regA) != PARSE_REG){
-                            fprintf(stderr, "[L%d]: Invalid REG\n", lineno);
-	                    return TYPE_ERR;
-			}
-	                (line->y64bin).codes[1] = HPACK(regA, REG_NONE);
-		    }
-		    else 
-			if (!strcmp(inst->name,"popq")){
-			    (line->y64bin).codes[0] = inst->code;
-		            if (parse_reg(&ptr, &regA) != PARSE_REG){
-				fprintf(stderr, "[L%d]: Invalid REG\n", lineno);
-		                return TYPE_ERR;
-			}
-       (line->y64bin).codes[1] = HPACK(regA, REG_NONE);
-   }
-
-
-
-        else if (!strcmp(inst->name,".byte") || !strcmp(inst->name,".word")
-
-			|| !strcmp(inst->name,".long") || !strcmp(inst->name,".quad"))
-
-        {
-
-            vtype = parse_data(&ptr, &name, &value);
-
-
-
-            if (vtype == PARSE_ERR)
-
-                return TYPE_ERR;
-
-            
-
-            if (vtype == PARSE_DIGIT)
-
+					   
+	else     if (!strcmp(inst->name,"jmp") || !strcmp(inst->name,"jle")
+				|| !strcmp(inst->name,"jl") || !strcmp(inst->name,"je")
+				|| !strcmp(inst->name,"jne") || !strcmp(inst->name,"jge")
+				|| !strcmp(inst->name,"jg") || !strcmp(inst->name,"call"))
             {
-
-				for (int i = 0; i < inst->bytes; i++)   
-
-                	(line->y64bin).codes[i] = HPACK((value>>(i*8+4))&0xF, (value>>(i*8))&0xF);
-
-            }
-
-
-
-            else if (vtype == PARSE_SYMBOL)
-
-			{
-
-                add_reloc(name, &(line->y64bin));
-
+						(line->y64bin).codes[0] = inst->code;
+						vtype = parse_imm(&ptr, &name, &value);
+						if (vtype == PARSE_ERR){
+							fprintf(stderr, "[L%d]: Invalid DEST\n", lineno);
+							return TYPE_ERR;
+						}
+						if (vtype == PARSE_DIGIT){
+							fprintf(stderr, "[L%d]: Invalid DEST\n", lineno);
+							return TYPE_ERR;
+						}
+						else if (vtype == PARSE_SYMBOL)
+							add_reloc(name, &(line->y64bin));
+				}
+	else	if (!strcmp(inst->name,"ret")){
+				(line->y64bin).codes[0] = inst->code;
+			}
+	else   if (!strcmp(inst->name,"pushq"))       {
+				(line->y64bin).codes[0] = inst->code;
+				if (parse_reg(&ptr, &regA) != PARSE_REG){
+						fprintf(stderr, "[L%d]: Invalid REG\n", lineno);
+						return TYPE_ERR;
+				}
+	                (line->y64bin).codes[1] = HPACK(regA, REG_NONE);
+	 }
+	else 	if (!strcmp(inst->name,"popq")){
+					(line->y64bin).codes[0] = inst->code;
+		            if (parse_reg(&ptr, &regA) != PARSE_REG){
+							fprintf(stderr, "[L%d]: Invalid REG\n", lineno);
+							return TYPE_ERR;
+					}
+					(line->y64bin).codes[1] = HPACK(regA, REG_NONE);
 			}
 
+		  else if (!strcmp(inst->name,".byte") || !strcmp(inst->name,".word")
+		  			|| !strcmp(inst->name,".long") || !strcmp(inst->name,".quad"))
+			{
+					vtype = parse_data(&ptr, &name, &value);
+					if (vtype == PARSE_ERR)
+					   return TYPE_ERR;       
+					if (vtype == PARSE_DIGIT)
+					{
+						for (int i = 0; i < inst->bytes; i++)   
+                			(line->y64bin).codes[i] = HPACK((value>>(i*8+4))&0xF, (value>>(i*8))&0xF);
+					}
+
+					else if (vtype == PARSE_SYMBOL)
+					{
+						add_reloc(name, &(line->y64bin));
+					}
         }
-
-
 
         else if (!strcmp(inst->name,".pos"))
-
         {
-
 			if (parse_digit(&ptr, &value) != PARSE_DIGIT)
-
 				return TYPE_ERR;
 
-
-
 			vmaddr = (int64_t)value;
-
 			(line->y64bin).addr = vmaddr;
-
         }
-
-
 
         else if (!strcmp(inst->name,".align"))
-
         {
-
 			if (parse_digit(&ptr, &value) != PARSE_DIGIT)
-
                 return TYPE_ERR;
 
-			
-
 			int64_t alignno = (int64_t)value;
-
 			vmaddr = ((vmaddr + alignno - 1) / alignno) * alignno;
-
             line->y64bin.addr = vmaddr;
-
         }
 
-
-
 		vmaddr += (line->y64bin).bytes;
-
 		SKIP_BLANK(ptr);
-
-		
-
 		if (! (IS_END(ptr)||IS_COMMENT(ptr)) )
-
 		{
-
 			line->type = TYPE_ERR;
-
 		}
-
 	}
-
-
     return line->type;
 }
 
@@ -942,13 +864,44 @@ int relocate(void)
     rtmp = reltab->next;
     while (rtmp) {
         /* find symbol */
-
         /* relocate y64bin according itype */
+    	symbol_t *symtmp;
+		symtmp = find_symbol(rtmp->name);
 
-        /* next */
+		if (symtmp == NULL) {
+			fprintf(stderr, "[--]: Unknown symbol:'%s'\n", rtmp->name);
+			return -1;
+		}
+
+		int relbytes = (rtmp->y64bin)->bytes;
+	
+		switch (relbytes)
+		{
+			case 1:
+				rel_val(rtmp, 0, 1, symtmp->addr);
+				break;
+			case 2:
+				rel_val(rtmp, 0, 2, symtmp->addr);
+				break;
+			case 4:
+				rel_val(rtmp, 0, 4, symtmp->addr);
+				break;
+			case 8:
+				rel_val(rtmp, 0, 8, symtmp->addr);
+				break;
+			case 9:
+				rel_val(rtmp, 1, 8, symtmp->addr);
+				break;
+			case 10:
+				rel_val(rtmp, 2, 8, symtmp->addr);
+				break;
+			default:
+				return -1;
+		}
+       /* next */
         rtmp = rtmp->next;
-    }
-    return 0;
+   }
+   return 0;
 }
 
 /*
@@ -963,9 +916,18 @@ int relocate(void)
 int binfile(FILE *out)
 {
     /* prepare image with y64 binary code */
-
     /* binary write y64 code to output file (NOTE: see fwrite()) */
-    
+	line_t *ltmp = line_head->next;
+	while (ltmp != NULL)
+	{
+		if (ltmp->type == TYPE_INS)
+		{
+			if (fseek(out, (ltmp->y64bin).addr, SEEK_SET) != 0)
+				return -1;
+			fwrite((ltmp->y64bin).codes, 1, (ltmp->y64bin).bytes, out);
+		}
+		ltmp = ltmp->next;
+	}
     return 0;
 }
 
