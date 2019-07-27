@@ -1,7 +1,7 @@
-
+﻿
     var result = [] , courses = []  , n = 0 , mandatory = [] , mresult = [] , mtmp = [] ,    msegs = [],  optional = [] ,oresult = [];
     //  最终结果      要拍的所有课程  课程总数   必选            必选排课结果    必须排课中间变量             可选课程
-
+//为了改动一下
     //判定能否加入
     function add(classes,mseg1){
         var mseg = mseg1;//防止变量修改
