@@ -64,10 +64,17 @@ private static void testJSFile() throws Exception {
     List<CourseSim> courseSims = new ArrayList<>();
     List<ClassInfoSim> classInfoSims = new ArrayList<>();
     List<ClassSegment> classSegments = new ArrayList<>();
+    List<CourseSim> courseSims1 = new ArrayList<>();
+    List<ClassInfoSim> classInfoSims1 = new ArrayList<>();
+    List<ClassSegment> classSegments1 = new ArrayList<>();
+
 
     ClassSegment classSegment = new ClassSegment();
     ClassInfoSim classInfoSim = new ClassInfoSim();
     CourseSim courseSim = new CourseSim();
+    ClassSegment classSegment1 = new ClassSegment();
+    ClassInfoSim classInfoSim1 = new ClassInfoSim();
+    CourseSim courseSim1 = new CourseSim();
 
     classSegment.setBegin_sec(1);
     classSegment.setEnd_sec(2);
@@ -81,14 +88,18 @@ private static void testJSFile() throws Exception {
     classInfoSim.setSegments(classSegments);
     classInfoSims.add(classInfoSim);
 
-    classSegment.setWeek(3);
-    classSegments.clear();
-    classSegments.add(classSegment);
+    classSegment1.setBegin_sec(1);
+    classSegment1.setEnd_sec(2);
+    classSegment1.setBegin_week(1);
+    classSegment1.setEnd_week(16);
+    classSegment1.setOdd_or_even('b');
+    classSegment1.setWeek(3);
+    classSegments1.add(classSegment1);
 
-    classInfoSim.setClassname("1-2");
-    classInfoSim.setSegments(classSegments);
+    classInfoSim1.setClassname("1-2");
+    classInfoSim1.setSegments(classSegments1);
 
-    classInfoSims.add(classInfoSim);
+    classInfoSims.add(classInfoSim1);
 
     courseSim.setCourse_id("1");
     courseSim.setRequired(true);
@@ -102,8 +113,7 @@ private static void testJSFile() throws Exception {
     ScriptEngine engine = mgr.getEngineByName("javascript");
     engine.eval(readJSFile());
     Invocable inv = (Invocable) engine;
-    Object res = (Object) inv.invokeFunction("arrange",courseSims);
-    System.out.println("res:" + res);
+    Object res =  inv.invokeFunction("arrange",courseSims);
 }
 
     public static void main(String[] args) throws Exception {
